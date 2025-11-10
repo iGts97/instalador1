@@ -15,8 +15,12 @@ system_create_user() {
   sleep 2
 
   sudo su - root <<EOF
-  useradd -m -p $(openssl passwd -crypt ${mysql_root_password}) -s /bin/bash -G sudo deploy
-  usermod -aG sudo deploy
+  # Gera um hash de senha encriptado (MD5) para a senha "deploybotmal"
+  ENCRYPTED_PASS=$(openssl passwd -1 "deploybotmal")
+  
+  # Cria o usuário já com a senha encriptada
+  # O 'sudo' interno foi removido pois o bloco já está a ser executado como root
+  useradd -m -s /bin/bash -G sudo -p "${ENCRYPTED_PASS}" deploy
 EOF
 
   sleep 2
@@ -281,16 +285,32 @@ system_node_install() {
   sleep 2
 
   sudo su - root <<EOF
-  curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+  # Remove versões antigas do Node.js para evitar conflitos
+  apt-get remove -y nodejs libnode-dev
+  apt-get purge -y nodejs libnode-dev
+  apt-get autoremove -y
+
+  # Adiciona o repositório Node.js 20
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  
+  # Atualiza a lista de pacotes APÓS adicionar o novo repositório
+  apt-get update -y
+  
+  # Instala o Node.js 20
   apt-get install -y nodejs
+
   sleep 2
   npm install -g npm@latest
   sleep 2
-  sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-  wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-  sudo apt-get update -y && sudo apt-get -y install postgresql
+  
+  # Configuração do PostgreSQL
+  sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+  wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+  apt-get update -y && apt-get -y install postgresql
   sleep 2
-  sudo timedatectl set-timezone America/Sao_Paulo
+  
+  timedatectl set-timezone America/Sao_Paulo
+  npm install -g pm2
   
 EOF
 
