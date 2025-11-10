@@ -99,6 +99,8 @@ backend_node_dependencies() {
 
   sudo su - deploy <<EOF
   cd /home/deploy/${instancia_add}/backend
+  npm cache clean --force
+  rm -rf node_modules
   npm install --force
 EOF
 
@@ -142,9 +144,14 @@ backend_update() {
   pm2 stop ${empresa_atualizar}-backend
   git pull
   cd /home/deploy/${empresa_atualizar}/backend
-  npm install
-  npm update -f
-  npm install @types/fs-extra
+  
+  # Força uma instalação limpa para evitar conflitos de versão
+  npm cache clean --force
+  rm -rf node_modules
+  npm install --force
+
+  # Removemos o "npm update -f" e o "npm install @types/fs-extra"
+  
   rm -rf dist 
   npm run build
   npx sequelize db:migrate
